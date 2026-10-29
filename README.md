@@ -1,4 +1,10 @@
-# Capri v0.3.1 (Windows)
+# Virtual Pet v0.3.1 (Windows)
+
+## Importante:
+
+El proyecto continúa en fase beta y todavía sigue en desarrollo (lo desarrollo en mi tiempo libre, no soy programador ni nada de eso, lo siento). Existen algunos errores e incompatibilidades con ciertas aplicaciones, pero en próximas actualizaciones se incluirá un menú para cambiar los assets del personaje con facilidad (próximos assets en un par de días: Marin Kitagawa y Hatsune Miku).
+
+¡Gracias por probar esta beta!
 
 ## Instalación fácil
 1. Instala Node.js LTS desde https://nodejs.org (solo la primera vez).
