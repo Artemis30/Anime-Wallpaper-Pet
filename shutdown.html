@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Capri</title>
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;cursor:none;font-family:Consolas,"Lucida Console",monospace;user-select:none}
+#wrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;animation:in 1.2s ease forwards}
+@keyframes in{to{opacity:1}}
+#logo{height:56vh;max-width:90vw;object-fit:contain;
+ filter:drop-shadow(0 0 16px #9ed95a) drop-shadow(0 0 44px rgba(158,217,90,.5));
+ animation:pulse 2.4s ease-in-out infinite,flick 7s infinite}
+@keyframes pulse{50%{filter:drop-shadow(0 0 7px #9ed95a) drop-shadow(0 0 22px rgba(158,217,90,.3))}}
+@keyframes flick{0%,93%,100%{opacity:1}94%{opacity:.55}95%{opacity:1}96%{opacity:.7}97%{opacity:1}}
+#bar{width:min(320px,40vw);height:2px;margin-top:4vh;background:rgba(158,217,90,.18);position:relative}
+#bar i{position:absolute;inset:0;background:#9ed95a;box-shadow:0 0 8px #9ed95a;transform-origin:left;transform:scaleX(0)}
+#txt{margin-top:14px;font-size:12px;letter-spacing:4px;color:rgba(158,217,90,.75);text-transform:uppercase}
+#hint{position:absolute;bottom:3vh;left:0;right:0;text-align:center;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.22)}
+</style></head>
+<body>
+<div id="wrap">
+  <img id="logo" src="assets/logo.png" alt="">
+  <div id="bar"><i id="fill"></i></div>
+  <div id="txt"></div>
+</div>
+<div id="hint">ESC o clic para cancelar</div>
+<script>
+const total = Math.max(1, parseInt(new URLSearchParams(location.search).get('s')) || 6);
+let left = total;
+const txt = document.getElementById('txt'), fill = document.getElementById('fill');
+const show = () => txt.textContent = 'Apagando sistema // 00:0' + Math.max(left, 0);
+show();
+requestAnimationFrame(() => { fill.style.transition = `transform ${total}s linear`; fill.style.transform = 'scaleX(1)'; });
+setInterval(() => { left--; show(); }, 1000);
+const cancel = () => capri.cancelShutdown();
+addEventListener('keydown', e => { if (e.key === 'Escape') cancel(); });
+addEventListener('click', cancel);
+</script></body></html>

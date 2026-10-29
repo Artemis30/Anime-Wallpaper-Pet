@@ -1,0 +1,25 @@
+{
+  "name": "capri",
+  "version": "0.3.1",
+  "description": "Mascota de escritorio para Windows",
+  "author": "Capri",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "latest",
+    "electron-builder": "latest"
+  },
+  "build": {
+    "appId": "com.capri.pet",
+    "productName": "Capri",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "index.html", "shutdown.html", "apps.json", "assets/**", "scripts/**"],
+    "asarUnpack": ["scripts/**"],
+    "win": { "icon": "build/icon.ico", "target": ["portable", "nsis"] },
+    "portable": { "artifactName": "Capri-portable.exe" },
+    "nsis": { "oneClick": true, "perMachine": false, "artifactName": "Capri-Setup.exe" }
+  }
+}

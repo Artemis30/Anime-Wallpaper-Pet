@@ -1,0 +1,216 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+:root{--cy:#00f0ff;--mg:#ff2a6d;--yl:#fcee0a;--bg:#0a0a12}
+html,body{margin:0;height:100%;overflow:hidden;background:transparent;user-select:none;font-family:Consolas,"Lucida Console",monospace}
+#pet{position:absolute;bottom:0;left:0;cursor:pointer;will-change:transform}
+#bob{width:100%;height:100%;transform-origin:50% 100%}
+#bob.on{animation:bob .45s ease-in-out infinite alternate}
+@keyframes bob{from{transform:translateY(0) rotate(-1.5deg)}to{transform:translateY(-6px) rotate(1.5deg)}}
+#sprite{background-repeat:no-repeat}
+@keyframes play{from{background-position:0 0}to{background-position:var(--end) 0}}
+
+/* ---- Diálogo cyberpunk ---- */
+#bubble{position:absolute;display:none;width:280px;filter:drop-shadow(0 0 6px rgba(0,240,255,.55)) drop-shadow(0 0 14px rgba(255,42,109,.25))}
+#bb{padding:2px;background:linear-gradient(135deg,var(--cy),var(--mg));
+ clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))}
+#bi{position:relative;padding:10px 12px 12px;background:var(--bg);
+ clip-path:polygon(0 0,calc(100% - 17px) 0,100% 17px,100% 100%,17px 100%,0 calc(100% - 17px))}
+#bi::before{content:"";position:absolute;inset:0;pointer-events:none;
+ background:repeating-linear-gradient(0deg,rgba(255,255,255,.045) 0 1px,transparent 1px 3px)}
+#bt{font-size:11px;letter-spacing:3px;color:var(--yl);text-transform:uppercase;margin-bottom:7px;
+ text-shadow:1px 0 var(--mg),-1px 0 var(--cy);animation:glitch 5s infinite}
+#bt::before{content:"// "}
+@keyframes glitch{0%,92%,100%{transform:none}93%{transform:translateX(-2px) skewX(8deg)}95%{transform:translateX(2px)}97%{transform:translateX(-1px) skewX(-6deg)}}
+#bm{font-size:13px;line-height:1.35;color:#d9faff;min-height:18px;text-shadow:0 0 4px rgba(0,240,255,.5)}
+#bbtn button{display:block;width:100%;margin-top:6px;padding:5px 9px;font:12px Consolas,monospace;letter-spacing:1px;
+ text-transform:uppercase;text-align:left;cursor:pointer;color:var(--cy);background:rgba(0,240,255,.06);
+ border:1px solid rgba(0,240,255,.45);clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px))}
+#bbtn button::before{content:"> ";opacity:.7}
+#bbtn button:hover{background:var(--cy);color:var(--bg);box-shadow:0 0 10px var(--cy)}
+#bbtn button.alt{color:var(--mg);border-color:rgba(255,42,109,.5);background:rgba(255,42,109,.06)}
+#bbtn button.alt:hover{background:var(--mg);color:var(--bg);box-shadow:0 0 10px var(--mg)}
+#bbtn .row{display:flex;gap:6px}
+#bbtn .row button{text-align:center;font-size:15px;padding:3px 0}
+#bbtn .row button::before{content:""}
+#tail{position:absolute;bottom:-12px;width:2px;height:12px;background:var(--cy);box-shadow:0 0 6px var(--cy)}
+#tail::after{content:"";position:absolute;bottom:-3px;left:-2px;width:6px;height:6px;background:var(--mg);box-shadow:0 0 6px var(--mg)}
+</style></head>
+<body>
+<div id="bubble"><div id="bb"><div id="bi"><div id="bt"></div><div id="bm"></div><div id="bbtn"></div></div></div><div id="tail"></div></div>
+<div id="pet"><div id="flip"><div id="bob"><div id="sprite"></div></div></div></div>
+<script>
+const $ = id => document.getElementById(id);
+const pet = $('pet'), flip = $('flip'), bob = $('bob'), sprite = $('sprite'), bubble = $('bubble');
+let C, scale, H, x = 200, facing = 1, state = '', hp = false, sleeping = false, busy = false;
+let walkTimer, hideTimer, nextTimer, typer, dragStart = null, moved = false, suppressClick = false;
+
+const V = s => (hp && C.states[s + '_hp']) ? s + '_hp' : s;   // variante con auriculares si procede
+const resolveNext = n => V(n.replace('_hp', ''));
+const place = () => { pet.style.transform = `translateX(${x}px)`; flip.style.transform = `scaleX(${facing})`; };
+
+function setState(s) {
+  const st = C.states[s]; if (!st || state === s) return;
+  clearTimeout(nextTimer);
+  const old = C.states[state]; state = s;
+  const w = st.w * scale, h = H * scale, n = st.frames;
+  if (old && old.w !== st.w) {  // mantener centrado al cambiar de ancho
+    const t = pet.style.transition; pet.style.transition = 'none';
+    x += (old.w - st.w) * scale / 2; place(); void pet.offsetWidth; pet.style.transition = t;
+  }
+  pet.style.width = sprite.style.width = w + 'px';
+  pet.style.height = sprite.style.height = h + 'px';
+  sprite.style.backgroundImage = `url("assets/${st.file}")`;
+  sprite.style.backgroundSize = `${n * w}px ${h}px`;
+  sprite.style.animation = 'none'; void sprite.offsetWidth;
+  if (n > 1) {
+    if (st.loop) { sprite.style.setProperty('--end', `${-n * w}px`); sprite.style.animation = `play ${n / st.fps}s steps(${n}) infinite`; }
+    else { sprite.style.setProperty('--end', `${-(n - 1) * w}px`); sprite.style.animation = `play ${(n - 1) / st.fps}s steps(${n - 1}) 1 forwards`; }
+  }
+  bob.classList.toggle('on', !!st.bob);
+  if (!st.loop && st.next) nextTimer = setTimeout(() => setState(resolveNext(st.next)), (n / st.fps) * 1000);
+}
+
+function wander() {
+  if (busy || sleeping) return;
+  if (hp && Math.random() < .35) return sit();
+  const w = C.states[V('walk')].w * scale;
+  const tx = Math.random() * (innerWidth - w), d = Math.abs(tx - x);
+  facing = tx > x ? 1 : -1;
+  const dur = Math.max(d / 60, .5);
+  setState(V('walk'));
+  pet.style.transition = `transform ${dur}s linear`;
+  x = tx; place();
+  walkTimer = setTimeout(() => { setState(V('idle')); walkTimer = setTimeout(wander, 3000 + Math.random() * 5000); }, dur * 1000);
+}
+function sit() {  // escuchando música: se sienta un rato
+  setState('sit_hp');
+  walkTimer = setTimeout(() => { setState(V('idle')); walkTimer = setTimeout(wander, 2000); }, 15000 + Math.random() * 10000);
+}
+function freeze() { clearTimeout(walkTimer); x = pet.getBoundingClientRect().left; pet.style.transition = 'none'; place(); }
+const resume = () => { clearTimeout(walkTimer); walkTimer = setTimeout(wander, 2200); };
+const unlockIfIdle = () => { if (!pet.matches(':hover') && !bubble.matches(':hover')) capri.setIgnore(true); };
+
+// ---- Audio: auriculares ----
+function onAudio(on) {
+  if (hp === on) return;
+  hp = on;
+  if (sleeping || busy) return;           // se aplicará al volver a idle
+  freeze(); setState(on ? 'don' : 'doff'); resume();
+}
+
+// ---- Diálogo ----
+function typeText(t) {
+  clearInterval(typer); const el = $('bm'); let i = 0;
+  typer = setInterval(() => { i++; el.textContent = t.slice(0, i) + (i < t.length ? '▌' : ''); if (i >= t.length) clearInterval(typer); }, 16);
+}
+function say(title, text, buttons = []) {
+  busy = true; freeze(); clearTimeout(hideTimer); setState(V('talk'));
+  $('bt').textContent = title; typeText(text);
+  const box = $('bbtn'); box.innerHTML = '';
+  const mk = ([label, fn, cls]) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; b.onclick = fn; return b; };
+  buttons.forEach(b => {
+    if (b.row) { const r = document.createElement('div'); r.className = 'row'; b.row.forEach(x => r.appendChild(mk(x))); box.appendChild(r); }
+    else box.appendChild(mk(b));
+  });
+  const wpx = parseFloat(pet.style.width), cx = x + wpx / 2;
+  bubble.style.display = 'block';
+  bubble.style.bottom = (H * scale + 14) + 'px';
+  const left = Math.min(Math.max(cx - 140, 8), innerWidth - 288);
+  bubble.style.left = left + 'px';
+  $('tail').style.left = Math.min(Math.max(cx - left, 14), 264) + 'px';
+}
+function hide() {
+  clearInterval(typer); bubble.style.display = 'none'; busy = false;
+  setState(sleeping ? 'sleep' : V('idle')); unlockIfIdle();
+  if (!sleeping) resume();
+}
+function toggleSleep() {
+  if (sleeping) { sleeping = false; busy = false; freeze(); setState('wake'); resume(); return; }
+  sleeping = true; busy = true; freeze(); clearTimeout(hideTimer); clearInterval(typer);
+  bubble.style.display = 'none'; setState('sleep_in'); unlockIfIdle();
+}
+
+// ---- Menús ----
+const back = ['Volver', () => menu(), 'alt'];
+const result = text => say('CAPRI', text, [['Volver', () => menu()], ['Vale', hide, 'alt']]);
+function menu() {
+  say('CAPRI // MENÚ', '¿Qué necesitas?', [
+    ['Música', menuMusic], ['Apps', menuApps], ['Archivos', menuFiles], ['Utilidades', menuUtil],
+    ['Dormir', toggleSleep], ['Cerrar', hide, 'alt']]);
+}
+function menuMusic() {
+  const setMsg = t => typeText(t);
+  say('MÚSICA // SPOTIFY', 'Control multimedia del sistema.', [
+    { row: [['⏮', async () => setMsg(await capri.action('media', 'prev'))],
+            ['⏯', async () => setMsg(await capri.action('media', 'play'))],
+            ['⏭', async () => setMsg(await capri.action('media', 'next'))]] },
+    ['Abrir Spotify', async () => setMsg(await capri.action('open-spotify'))],
+    ['¿Qué suena?', async () => setMsg(await capri.action('spotify-title'))],
+    back]);
+}
+async function menuApps() {
+  const names = await capri.getApps();
+  say('APPS // LANZADOR', 'Elige qué abrir.', [
+    ...names.map((n, i) => [n, async () => result(await capri.action('launch', i))]), back]);
+}
+function menuFiles() {
+  say('ARCHIVOS', 'Acceso rápido.', [
+    ['Carpeta de Claude', async () => result(await capri.action('open-claude'))],
+    ['Mi carpeta de usuario', async () => result(await capri.action('open-explorer'))], back]);
+}
+function menuUtil() {
+  say('UTILIDADES', 'Herramientas rápidas.', [
+    ['¿Qué hora es?', () => result('Son las ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + '.')],
+    ['Recordatorio en 5 min', () => {
+      setTimeout(() => { if (sleeping) toggleSleep(); say('RECORDATORIO', '¡Han pasado 5 minutos!', [['Vale', hide]]); }, 5 * 60000);
+      result('Hecho. Te aviso en 5 minutos.');
+    }],
+    ['Apagar el PC', menuShutdown, 'alt'], back]);
+}
+function menuShutdown() {
+  say('APAGAR // CONFIRMAR', '¿Seguro que quieres apagar el equipo? Guarda tu trabajo antes.', [
+    ['Sí, apagar', () => capri.action('shutdown'), 'alt'], ['Cancelar', () => menu()]]);
+}
+
+// ---- Ratón: clic = menú, arrastrar = mover, clic derecho = opciones ----
+[pet, bubble].forEach(el => {
+  el.addEventListener('mouseenter', () => capri.setIgnore(false));
+  el.addEventListener('mouseleave', () => { if (!dragStart) capri.setIgnore(true); });
+});
+pet.addEventListener('mousedown', e => { if (e.button === 0) { dragStart = { mx: e.clientX, x: pet.getBoundingClientRect().left }; moved = false; } });
+addEventListener('mousemove', e => {
+  if (!dragStart) return;
+  const dx = e.clientX - dragStart.mx;
+  if (!moved && Math.abs(dx) < 5) return;
+  if (!moved) { moved = true; freeze(); busy = true; clearInterval(typer); bubble.style.display = 'none'; }
+  x = Math.min(Math.max(dragStart.x + dx, 0), innerWidth - parseFloat(pet.style.width)); place();
+});
+addEventListener('mouseup', () => {
+  if (!dragStart) return;
+  const was = moved; dragStart = null;
+  if (was) {
+    suppressClick = true; setTimeout(() => suppressClick = false, 0);
+    busy = sleeping; if (!sleeping) { setState(V('idle')); resume(); }
+  }
+  unlockIfIdle();
+});
+pet.addEventListener('click', () => { if (suppressClick) return; sleeping ? toggleSleep() : menu(); });
+pet.addEventListener('contextmenu', e => { e.preventDefault(); capri.contextMenu(); });
+
+capri.onToggleSleep(toggleSleep);
+capri.onAudio(onAudio);
+capri.onEvent(({ message }) => {
+  if (sleeping) toggleSleep();
+  say('AVISO // ENTRANTE', message, [['Vale', hide]]);
+  hideTimer = setTimeout(hide, 10000);
+});
+
+(async () => {
+  C = await capri.getCharacter(); scale = C.scale; H = C.h;
+  hp = await capri.getAudio();
+  place(); setState(V('idle'));
+  say('CAPRI // ONLINE', 'Sistema listo. Haz clic en mí para abrir el menú.', [['Vale', hide]]);
+  hideTimer = setTimeout(hide, 8000);
+})();
+</script></body></html>

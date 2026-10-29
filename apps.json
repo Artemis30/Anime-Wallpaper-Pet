@@ -1,0 +1,6 @@
+[
+  { "name": "Spotify", "open": "spotify:" },
+  { "name": "YouTube", "open": "https://www.youtube.com" },
+  { "name": "Bloc de notas", "open": "notepad.exe" },
+  { "name": "Calculadora", "open": "calc.exe" }
+]
