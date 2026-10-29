@@ -6,6 +6,8 @@ El proyecto continúa en fase beta y todavía sigue en desarrollo (lo desarrollo
 
 ¡Gracias por probar esta beta!
 
+Por cierto se que pone Capri pero en verdad sale Luci es un error ya que al principio iba a aparecer Capri solo que tuve un cambio de planes en la proxima acrtualizaciòn lo corregire
+
 ## Instalación fácil
 1. Instala Node.js LTS desde https://nodejs.org (solo la primera vez).
 2. Haz doble clic en **INSTALAR.bat**. Descarga lo necesario y crea en `dist/`:
